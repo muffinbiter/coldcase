@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>COLD CASE — 인터랙티브 데모</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700&family=Noto+Sans+KR:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a0f;
+  --surface: #12121a;
+  --card: #1a1a25;
+  --card-hover: #22222f;
+  --accent: #c8a45e;
+  --accent-dim: #8a7340;
+  --red: #c44040;
+  --red-dim: #8a2020;
+  --green: #40a060;
+  --text: #e8e4dc;
+  --text-dim: #8a8578;
+  --text-muted: #5a574e;
+  --border: #2a2a35;
+  --font-serif: 'Noto Serif KR', Georgia, serif;
+  --font-sans: 'Noto Sans KR', 'Helvetica Neue', sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+  background: #000;
+  font-family: var(--font-sans);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 12px;
+  overflow-x: hidden;
+}
+
+/* Phone Frame */
+.phone-label {
+  color: var(--accent);
+  font-family: var(--font-serif);
+  font-size: 13px;
+  letter-spacing: 3px;
+  margin-bottom: 12px;
+  text-align: center;
+}
+.phone {
+  width: 375px;
+  max-width: 100%;
+  height: 720px;
+  max-height: calc(100vh - 60px);
+  background: var(--bg);
+  border-radius: 36px;
+  border: 2px solid var(--border);
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 20px 80px rgba(200,164,94,0.08), 0 0 0 1px rgba(200,164,94,0.05);
+}
+.notch {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 150px; height: 28px; background: #000;
+  border-radius: 0 0 20px 20px; z-index: 100;
+}
+.status-bar {
+  height: 44px; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px; font-size: 12px; color: var(--text-dim); position: relative; z-index: 99;
+}
+.screen-container {
+  height: calc(100% - 44px);
+  overflow: hidden;
+  position: relative;
+}
+
+/* Screens */
+.screen { display: none; height: 100%; width: 100%; position: absolute; top: 0; left: 0; }
+.screen.active { display: flex; flex-direction: column; }
+
+/* Lock Screen */
+#lock-screen {
+  background: radial-gradient(ellipse at 50% 30%, #151520, var(--bg));
+  align-items: center; justify-content: center; padding: 24px;
+}
+.lock-time { font-size: 48px; font-family: var(--font-serif); font-weight: 300; letter-spacing: -2px; }
+.lock-date { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+.lock-waiting {
+  position: absolute; bottom: 100px; font-size: 12px; color: var(--text-muted);
+  animation: pulse 2s infinite;
+}
+
+/* Push Notification */
+.push-notif {
+  position: absolute; top: -120px; left: 16px; right: 16px;
+  background: rgba(30,30,42,0.95); backdrop-filter: blur(20px);
+  border-radius: 16px; padding: 14px; cursor: pointer;
+  border: 1px solid var(--border);
+  transition: top 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 50;
+}
+.push-notif.show { top: 80px; }
+.push-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.push-icon {
+  width: 28px; height: 28px; border-radius: 7px;
+  background: linear-gradient(135deg, var(--red), #2a1515);
+  display: flex; align-items: center; justify-content: center; font-size: 14px;
+}
+.push-app { font-size: 11px; color: var(--text-dim); font-weight: 600; letter-spacing: 1px; }
+.push-time { font-size: 10px; color: var(--text-muted); margin-left: auto; }
+.push-body { font-size: 13px; color: var(--text); line-height: 1.5; }
+.push-body strong { color: var(--accent); }
+.push-tap { font-size: 10px; color: var(--accent-dim); margin-top: 8px; text-align: center; }
+
+/* Scrollable Content */
+.scroll-content {
+  flex: 1; overflow-y: auto; padding: 0 20px 88px 20px;
+  -webkit-overflow-scrolling: touch;
+}
+.scroll-content::-webkit-scrollbar { width: 0; }
+
+/* Section Headers */
+.section-tag {
+  font-size: 10px; color: var(--accent); letter-spacing: 3px; font-weight: 700;
+  padding: 16px 0 4px;
+}
+.section-title {
+  font-size: 22px; font-family: var(--font-serif); font-weight: 700; margin: 6px 0 4px; line-height: 1.3;
+}
+.section-sub { font-size: 11px; color: var(--text-muted); }
+
+/* Progress Bar */
+.progress-wrap { margin: 16px 0; }
+.progress-label { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 10px; }
+.progress-label span:first-child { color: var(--text-dim); letter-spacing: 1px; }
+.progress-label span:last-child { color: var(--accent); }
+.progress-bar { height: 3px; background: var(--card); border-radius: 2px; }
+.progress-fill {
+  height: 100%; width: 35%; border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-dim));
+  transition: width 1s ease;
+}
+
+/* Cards */
+.card {
+  background: var(--card); border-radius: 12px; padding: 16px;
+  margin-bottom: 12px; border: 1px solid var(--border);
+  cursor: pointer; transition: border-color 0.3s;
+}
+.card:active, .card.expanded { border-color: rgba(200,164,94,0.25); }
+.card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.card-header span:first-child { font-size: 16px; }
+.card-header span:last-child { font-size: 13px; font-weight: 600; }
+.card-body { font-size: 12px; color: var(--text-dim); line-height: 1.7; }
+.card-expand {
+  margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);
+  display: none;
+}
+.card.expanded .card-expand { display: block; }
+.victim-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+.victim-info { font-size: 12px; line-height: 1.8; }
+.victim-info strong { color: var(--text); }
+
+/* Timeline */
+.timeline-title {
+  font-size: 11px; color: var(--text-muted); letter-spacing: 1px;
+  margin: 8px 0 12px; font-weight: 600;
+}
+.timeline-item {
+  display: flex; gap: 12px; padding: 10px 0 10px 16px; margin-left: 8px;
+  border-left: 2px solid var(--border);
+}
+.timeline-item.highlight { border-left-color: var(--accent); }
+.tl-time { font-size: 11px; color: var(--accent); font-family: monospace; min-width: 40px; }
+.tl-event { font-size: 12px; color: var(--text-dim); line-height: 1.4; }
+.timeline-item.highlight .tl-event { color: var(--text); }
+
+/* New Alert Card */
+.alert-card {
+  background: linear-gradient(135deg, var(--card), #1a1520);
+  border-radius: 12px; padding: 16px; margin-top: 16px;
+  border: 1px solid rgba(138,32,32,0.25);
+}
+.alert-tag { font-size: 10px; color: var(--red); letter-spacing: 1px; margin-bottom: 6px; font-weight: 700; }
+.alert-body { font-size: 12px; line-height: 1.6; }
+
+/* Suspect Cards */
+.suspect-card {
+  background: var(--card); border-radius: 14px; padding: 16px;
+  margin-bottom: 10px; cursor: pointer;
+  border: 1px solid var(--border); transition: all 0.3s;
+}
+.suspect-card.expanded { background: var(--card-hover); border-color: rgba(200,164,94,0.3); }
+.suspect-top { display: flex; align-items: center; gap: 12px; }
+.suspect-avatar {
+  width: 44px; height: 44px; border-radius: 22px;
+  background: linear-gradient(135deg, var(--card), var(--surface));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; border: 2px solid var(--border); flex-shrink: 0;
+}
+.suspect-info { flex: 1; }
+.suspect-name { font-size: 14px; font-weight: 600; }
+.suspect-name span { font-size: 11px; color: var(--text-muted); font-weight: 400; }
+.suspect-relation { font-size: 11px; color: var(--text-dim); }
+.suspect-trust { text-align: center; }
+.trust-label { font-size: 9px; color: var(--text-muted); margin-bottom: 3px; }
+.trust-value { font-size: 14px; font-weight: 700; }
+.trust-high { color: var(--green); }
+.trust-mid { color: var(--accent); }
+.trust-low { color: var(--red); }
+.suspect-detail {
+  margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);
+  display: none;
+}
+.suspect-card.expanded .suspect-detail { display: block; }
+.detail-label { font-size: 10px; color: var(--accent); letter-spacing: 1px; margin-bottom: 4px; }
+.detail-text { font-size: 12px; color: var(--text-dim); line-height: 1.6; margin-bottom: 10px; }
+
+/* Interrogate Button */
+.btn-interrogate {
+  width: 100%; padding: 12px; border: none; border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+  color: var(--bg); font-size: 13px; font-weight: 700;
+  font-family: var(--font-sans); cursor: pointer; letter-spacing: 1px;
+}
+
+/* Interrogation Screen */
+#interrogate-screen { background: var(--bg); }
+.interro-header {
+  padding: 12px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px; background: var(--surface);
+  flex-shrink: 0;
+}
+.btn-back {
+  background: none; border: none; color: var(--accent);
+  font-size: 18px; cursor: pointer; padding: 0;
+}
+.interro-avatar {
+  width: 36px; height: 36px; border-radius: 18px; background: var(--card);
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+.interro-name { font-size: 14px; font-weight: 600; }
+.interro-status { font-size: 10px; color: var(--red); }
+.chat-area {
+  flex: 1; overflow-y: auto; padding: 16px 16px 8px;
+  display: flex; flex-direction: column; gap: 10px;
+  -webkit-overflow-scrolling: touch;
+}
+.chat-area::-webkit-scrollbar { width: 0; }
+.msg { max-width: 80%; animation: msgIn 0.3s ease; }
+.msg-user { align-self: flex-end; }
+.msg-suspect { align-self: flex-start; }
+.msg-system { align-self: center; max-width: 100%; }
+.msg-bubble {
+  padding: 10px 14px; font-size: 13px; line-height: 1.6;
+}
+.msg-user .msg-bubble {
+  background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+  color: var(--bg); border-radius: 14px 14px 4px 14px;
+}
+.msg-suspect .msg-bubble {
+  background: var(--card); color: var(--text);
+  border-radius: 14px 14px 14px 4px;
+}
+.msg-system .msg-bubble {
+  font-size: 10px; color: var(--text-muted); text-align: center;
+  padding: 8px 16px; background: var(--card); border-radius: 20px;
+}
+.typing-indicator {
+  align-self: flex-start; padding: 10px 14px;
+  background: var(--card); border-radius: 14px 14px 14px 4px;
+  font-size: 13px; color: var(--text-muted); animation: pulse 1s infinite;
+}
+.question-area {
+  padding: 12px 16px 24px; border-top: 1px solid var(--border);
+  background: var(--surface); flex-shrink: 0;
+}
+.question-label { font-size: 10px; color: var(--text-muted); margin-bottom: 6px; }
+.question-btn {
+  width: 100%; padding: 10px 14px; background: var(--card);
+  border: 1px solid var(--border); border-radius: 10px;
+  color: var(--text); font-size: 12px; text-align: left;
+  cursor: pointer; font-family: var(--font-sans); line-height: 1.4;
+  margin-bottom: 8px; transition: background 0.2s, border-color 0.2s;
+}
+.question-btn:active { background: var(--card-hover); border-color: rgba(200,164,94,0.25); }
+.question-wait {
+  padding: 10px; text-align: center; font-size: 11px; color: var(--text-muted);
+}
+
+/* Clue Board */
+.clue-map {
+  background: var(--card); border-radius: 14px; padding: 20px;
+  margin-bottom: 16px; position: relative; min-height: 180px;
+  border: 1px solid var(--border); overflow: hidden;
+}
+.clue-grid {
+  position: absolute; inset: 0;
+  background-image: linear-gradient(rgba(42,42,53,0.25) 1px, transparent 1px),
+                     linear-gradient(90deg, rgba(42,42,53,0.25) 1px, transparent 1px);
+  background-size: 30px 30px;
+}
+.clue-node {
+  position: absolute; width: 105px; padding: 8px;
+  background: var(--surface); border-radius: 8px;
+  border: 1px solid var(--border); cursor: pointer; z-index: 2;
+  transition: all 0.3s;
+}
+.clue-node.key { border-color: var(--accent); }
+.clue-node.active { background: rgba(200,164,94,0.12); }
+.clue-type { font-size: 9px; font-weight: 700; margin-bottom: 2px; }
+.clue-type.key { color: var(--accent); }
+.clue-type.ref { color: var(--text-muted); }
+.clue-name { font-size: 11px; color: var(--text); line-height: 1.3; }
+
+.clue-detail-card {
+  background: var(--card); border-radius: 12px; padding: 16px;
+  margin-bottom: 12px; border: 1px solid rgba(200,164,94,0.2);
+  display: none;
+}
+.clue-detail-card.show { display: block; }
+.clue-detail-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+.clue-detail-desc { font-size: 12px; color: var(--text-dim); line-height: 1.7; }
+
+.clue-list-title { font-size: 11px; color: var(--text-muted); letter-spacing: 1px; margin-bottom: 10px; font-weight: 600; }
+.clue-list-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; background: var(--card); border-radius: 10px;
+  margin-bottom: 8px; cursor: pointer; border: 1px solid var(--border);
+  transition: border-color 0.3s;
+}
+.clue-list-item.active { border-color: rgba(200,164,94,0.25); }
+.clue-list-item.locked { opacity: 0.5; cursor: default; }
+.clue-mark { font-size: 10px; font-weight: 700; min-width: 30px; }
+.clue-mark.key { color: var(--accent); }
+.clue-mark.ref { color: var(--text-muted); }
+.clue-item-name { font-size: 12px; }
+.clue-item-hint { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+
+/* Resolve Screen */
+.warning-box {
+  background: rgba(196,64,64,0.08); border: 1px solid rgba(196,64,64,0.2);
+  border-radius: 10px; padding: 14px; margin-bottom: 16px;
+}
+.warning-text { font-size: 11px; color: var(--red); line-height: 1.6; }
+.accuse-card {
+  display: flex; align-items: center; gap: 12px; padding: 16px;
+  background: var(--card); border-radius: 12px; margin-bottom: 10px;
+  cursor: pointer; border: 2px solid var(--border); transition: all 0.3s;
+}
+.accuse-card.selected { background: rgba(196,64,64,0.08); border-color: var(--red); }
+.accuse-avatar {
+  width: 40px; height: 40px; border-radius: 20px; background: var(--surface);
+  display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;
+}
+.accuse-info { flex: 1; }
+.accuse-name { font-size: 14px; font-weight: 600; }
+.accuse-rel { font-size: 11px; color: var(--text-dim); }
+.accuse-check {
+  width: 24px; height: 24px; border-radius: 12px; background: var(--red);
+  display: none; align-items: center; justify-content: center;
+  font-size: 12px; color: #fff;
+}
+.accuse-card.selected .accuse-check { display: flex; }
+.btn-accuse {
+  width: 100%; padding: 14px; border: none; border-radius: 12px;
+  font-size: 14px; font-weight: 700; font-family: var(--font-sans);
+  cursor: pointer; margin-top: 8px; letter-spacing: 1px; transition: all 0.3s;
+}
+.btn-accuse.disabled { background: var(--card); color: var(--text-muted); cursor: default; }
+.btn-accuse.enabled { background: linear-gradient(135deg, var(--red), var(--red-dim)); color: #fff; }
+.result-card {
+  background: var(--card); border-radius: 14px; padding: 24px;
+  text-align: center; border: 1px solid rgba(200,164,94,0.25);
+  display: none;
+}
+.result-card.show { display: block; }
+.result-icon { font-size: 40px; margin-bottom: 12px; }
+.result-title { font-size: 16px; font-family: var(--font-serif); font-weight: 700; margin-bottom: 8px; }
+.result-desc { font-size: 12px; color: var(--text-dim); line-height: 1.7; }
+.result-demo {
+  margin-top: 16px; padding: 10px 20px;
+  background: rgba(200,164,94,0.08); border-radius: 8px;
+  font-size: 11px; color: var(--accent);
+}
+
+/* Bottom Nav */
+.bottom-nav {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 64px;
+  background: linear-gradient(180deg, transparent 0%, var(--bg) 20%);
+  display: flex; align-items: center; border-top: 1px solid var(--border);
+  padding-bottom: 8px; z-index: 50;
+}
+.nav-btn {
+  flex: 1; background: none; border: none;
+  color: var(--text-muted); font-size: 10px; font-family: var(--font-sans);
+  cursor: pointer; display: flex; flex-direction: column;
+  align-items: center; gap: 4px; padding: 8px 0; transition: color 0.2s;
+}
+.nav-btn.active { color: var(--accent); }
+.nav-icon { font-size: 18px; }
+
+/* Animations */
+@keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+@keyframes msgIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Mobile responsive */
+@media (max-width: 400px) {
+  .phone { border-radius: 0; border: none; width: 100%; height: 100vh; max-height: 100vh; }
+  .phone-label { display: none; }
+  body { padding: 0; }
+  .notch { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="phone-label">COLD CASE — 인터랙티브 데모</div>
+
+<div class="phone">
+  <div class="notch"></div>
+  <div class="status-bar">
+    <span>9:41</span>
+    <span style="font-size:10px">●●●● 5G</span>
+  </div>
+  <div class="screen-container">
+
+    <!-- ═══ LOCK SCREEN ═══ -->
+    <div id="lock-screen" class="screen active">
+      <div class="lock-time">9:41</div>
+      <div class="lock-date">2월 11일 화요일</div>
+      <div class="lock-waiting" id="lock-waiting">알림을 기다리는 중...</div>
+
+      <div class="push-notif" id="push-notif" onclick="goToScreen('case')">
+        <div class="push-header">
+          <div class="push-icon">🔍</div>
+          <span class="push-app">COLD CASE</span>
+          <span class="push-time">지금</span>
+        </div>
+        <div class="push-body">
+          <strong>긴급</strong> — 어젯밤 판교 테크노밸리 인근 공원에서 신원불명 사망자가 발견되었습니다. 혹시 어젯밤 삼평동 근처에서 이상한 것을 목격하셨나요?
+        </div>
+        <div class="push-tap">탭하여 확인</div>
+      </div>
+    </div>
+
+    <!-- ═══ CASE FILE ═══ -->
+    <div id="case-screen" class="screen">
+      <div class="scroll-content">
+        <div style="border-bottom:1px solid var(--border);padding-bottom:12px">
+          <div class="section-tag">CASE #2026-0211</div>
+          <div class="section-title">판교 공원의 새벽</div>
+          <div class="section-sub">발생: 2026.02.11 AM 03:12 | D-5</div>
+        </div>
+
+        <div class="progress-wrap">
+          <div class="progress-label"><span>수사 진행도</span><span>35%</span></div>
+          <div class="progress-bar"><div class="progress-fill"></div></div>
+        </div>
+
+        <!-- Summary -->
+        <div class="card" id="summary-card" onclick="toggleCard('summary-card')">
+          <div class="card-header"><span>📋</span><span>사건 개요</span></div>
+          <div class="card-body">
+            삼평동 판교 테크노밸리 뒤편 화랑공원에서 IT 스타트업 대표 한정우(44)의 시신이 발견되었습니다. 사인은 둔기에 의한 두부 외상이며, 현장에서 흉기는 발견되지 않았습니다. 최근 시리즈B 투자 유치를 앞두고 공동창업자와 극심한 갈등이 있었던 것으로 확인됩니다.
+          </div>
+          <div class="card-expand">
+            <div class="victim-label">피해자 정보</div>
+            <div class="victim-info">
+              <strong>한정우</strong> (44) — AI 스타트업 'DeepSight' 대표<br>
+              <span style="color:var(--text-dim)">삼평동 판교 테크노밸리 제2단지 입주. 시리즈B (300억) 투자 유치 직전이었으며, 최근 기술 유출 의혹으로 내부 감사 진행 중.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="timeline-title">타임라인</div>
+        <div class="timeline-item">
+          <div class="tl-time">23:40</div>
+          <div class="tl-event">💳 피해자 마지막 카드 결제 (판교역 근처 술집)</div>
+        </div>
+        <div class="timeline-item highlight">
+          <div class="tl-time">00:15</div>
+          <div class="tl-event">📞 윤태호와 23분간 통화 (목소리 높아짐 확인)</div>
+        </div>
+        <div class="timeline-item">
+          <div class="tl-time">01:50</div>
+          <div class="tl-event">📹 삼평동 GS25 CCTV: 피해자 혼자 걸어가는 모습</div>
+        </div>
+        <div class="timeline-item highlight">
+          <div class="tl-time">02:30</div>
+          <div class="tl-event">📹 화랑공원 입구 CCTV: 두 사람의 실루엣 포착</div>
+        </div>
+        <div class="timeline-item">
+          <div class="tl-time">03:12</div>
+          <div class="tl-event">🚨 새벽 조깅객 신고 — 시신 발견</div>
+        </div>
+        <div class="timeline-item">
+          <div class="tl-time">03:45</div>
+          <div class="tl-event">🔍 분당경찰서 도착, 수사 개시</div>
+        </div>
+
+        <!-- Alert -->
+        <div class="alert-card">
+          <div class="alert-tag">🔴 NEW — 30분 전</div>
+          <div class="alert-body">
+            판교역 인근 술집 사장의 제보가 접수되었습니다. "그날 밤 한정우 대표가 여자분과 심하게 다투다 나갔다"고 합니다. 용의자 탭에서 확인하세요.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SUSPECTS ═══ -->
+    <div id="suspects-screen" class="screen">
+      <div class="scroll-content">
+        <div class="section-tag" style="padding-top:16px">SUSPECTS</div>
+        <div class="section-title" style="font-size:20px;margin-bottom:12px">용의자 목록</div>
+
+        <!-- Suspect 1 -->
+        <div class="suspect-card" id="suspect-1" onclick="toggleSuspect(1)">
+          <div class="suspect-top">
+            <div class="suspect-avatar">👩</div>
+            <div class="suspect-info">
+              <div class="suspect-name">서민아 <span>(36)</span></div>
+              <div class="suspect-relation">피해자의 아내</div>
+            </div>
+            <div class="suspect-trust">
+              <div class="trust-label">신뢰도</div>
+              <div class="trust-value trust-mid">55%</div>
+            </div>
+          </div>
+          <div class="suspect-detail">
+            <div class="detail-label">동기</div>
+            <div class="detail-text">최근 남편의 외도 정황을 포착. 이혼 시 재산 분할보다 사망 시 보험금(20억)이 훨씬 큼.</div>
+            <div class="detail-label">알리바이</div>
+            <div class="detail-text">사건 당일 밤 분당 자택에서 딸과 함께 있었다고 주장. 딸(7세)은 이미 잠든 상태.</div>
+            <button class="btn-interrogate" onclick="event.stopPropagation(); startInterrogation(1)">🎙️ 심문하기</button>
+          </div>
+        </div>
+
+        <!-- Suspect 2 -->
+        <div class="suspect-card" id="suspect-2" onclick="toggleSuspect(2)">
+          <div class="suspect-top">
+            <div class="suspect-avatar">👨‍💼</div>
+            <div class="suspect-info">
+              <div class="suspect-name">윤태호 <span>(46)</span></div>
+              <div class="suspect-relation">공동창업자 / CTO</div>
+            </div>
+            <div class="suspect-trust">
+              <div class="trust-label">신뢰도</div>
+              <div class="trust-value trust-low">30%</div>
+            </div>
+          </div>
+          <div class="suspect-detail">
+            <div class="detail-label">동기</div>
+            <div class="detail-text">기술 유출 의혹의 핵심 인물. 감사 결과에 따라 지분 전량 회수 + 형사고발 가능성. 시리즈B 직전 대표가 사망하면 자동으로 대표 승계.</div>
+            <div class="detail-label">알리바이</div>
+            <div class="detail-text">판교 사무실에서 야근 중이었다고 주장. 사무실 출입 기록은 22시 이후 없음.</div>
+            <button class="btn-interrogate" onclick="event.stopPropagation(); startInterrogation(2)">🎙️ 심문하기</button>
+          </div>
+        </div>
+
+        <!-- Suspect 3 -->
+        <div class="suspect-card" id="suspect-3" onclick="toggleSuspect(3)">
+          <div class="suspect-top">
+            <div class="suspect-avatar">👩‍💻</div>
+            <div class="suspect-info">
+              <div class="suspect-name">장유진 <span>(28)</span></div>
+              <div class="suspect-relation">전 비서 / 내부고발자</div>
+            </div>
+            <div class="suspect-trust">
+              <div class="trust-label">신뢰도</div>
+              <div class="trust-value trust-high">70%</div>
+            </div>
+          </div>
+          <div class="suspect-detail">
+            <div class="detail-label">동기</div>
+            <div class="detail-text">6개월 전 해고 후 기술 유출 내부고발. 피해자에게 심한 보복을 당해왔으며 최근 SNS에 "반드시 대가를 치르게 하겠다"는 글 게시.</div>
+            <div class="detail-label">알리바이</div>
+            <div class="detail-text">정자동 자취방에 있었다고 주장. 배달앱 기록상 00:30에 주문 내역 있음.</div>
+            <button class="btn-interrogate" onclick="event.stopPropagation(); startInterrogation(3)">🎙️ 심문하기</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ INTERROGATION ═══ -->
+    <div id="interrogate-screen" class="screen">
+      <div class="interro-header">
+        <button class="btn-back" onclick="goToScreen('suspects')">←</button>
+        <div class="interro-avatar" id="interro-avatar"></div>
+        <div>
+          <div class="interro-name" id="interro-name"></div>
+          <div class="interro-status">🔴 심문 중</div>
+        </div>
+      </div>
+      <div class="chat-area" id="chat-area"></div>
+      <div class="question-area" id="question-area"></div>
+    </div>
+
+    <!-- ═══ CLUE BOARD ═══ -->
+    <div id="clue-screen" class="screen">
+      <div class="scroll-content">
+        <div class="section-tag" style="padding-top:16px">CLUE BOARD</div>
+        <div class="section-title" style="font-size:20px">단서 보드</div>
+        <div class="section-sub" style="margin-bottom:16px">수집: 3/6</div>
+
+        <!-- Map -->
+        <div class="clue-map">
+          <div class="clue-grid"></div>
+          <svg style="position:absolute;inset:0;z-index:1" width="100%" height="100%">
+            <line x1="125" y1="45" x2="185" y2="55" stroke="var(--accent)" stroke-width="1" stroke-dasharray="4" opacity="0.4"/>
+            <line x1="75" y1="48" x2="155" y2="115" stroke="var(--accent)" stroke-width="1" stroke-dasharray="4" opacity="0.4"/>
+            <line x1="230" y1="75" x2="205" y2="115" stroke="var(--accent)" stroke-width="1" stroke-dasharray="4" opacity="0.3"/>
+          </svg>
+          <div class="clue-node key" style="left:20px;top:20px" onclick="showClueDetail(1)">
+            <div class="clue-type key">★ 핵심</div>
+            <div class="clue-name">CCTV 영상</div>
+          </div>
+          <div class="clue-node key" style="left:185px;top:25px" onclick="showClueDetail(2)">
+            <div class="clue-type key">★ 핵심</div>
+            <div class="clue-name">심야 통화기록</div>
+          </div>
+          <div class="clue-node" style="left:100px;top:95px" onclick="showClueDetail(3)">
+            <div class="clue-type ref">참고</div>
+            <div class="clue-name">발견된 메모</div>
+          </div>
+        </div>
+
+        <!-- Detail Card -->
+        <div class="clue-detail-card" id="clue-detail">
+          <div class="clue-detail-title" id="clue-detail-title"></div>
+          <div class="clue-detail-desc" id="clue-detail-desc"></div>
+        </div>
+
+        <!-- Found -->
+        <div class="clue-list-title">수집된 단서</div>
+        <div class="clue-list-item" onclick="showClueDetail(1)">
+          <div class="clue-mark key">★</div>
+          <div>
+            <div class="clue-item-name">CCTV 영상</div>
+            <div class="clue-item-hint">화랑공원 입구 02:30경 두 사람의...</div>
+          </div>
+        </div>
+        <div class="clue-list-item" onclick="showClueDetail(2)">
+          <div class="clue-mark key">★</div>
+          <div>
+            <div class="clue-item-name">심야 통화기록</div>
+            <div class="clue-item-hint">사망 추정 3시간 전 윤태호와 23분...</div>
+          </div>
+        </div>
+        <div class="clue-list-item" onclick="showClueDetail(3)">
+          <div class="clue-mark ref">○</div>
+          <div>
+            <div class="clue-item-name">발견된 메모</div>
+            <div class="clue-item-hint">피해자 주머니에서 "다 끝내자"...</div>
+          </div>
+        </div>
+
+        <!-- Locked -->
+        <div class="clue-list-title" style="margin-top:16px">미발견 단서</div>
+        <div class="clue-list-item locked">
+          <span style="font-size:14px">🔒</span>
+          <div>
+            <div class="clue-item-name" style="color:var(--text-dim)">???</div>
+            <div class="clue-item-hint">수사를 진행하면 발견됩니다</div>
+          </div>
+        </div>
+        <div class="clue-list-item locked">
+          <span style="font-size:14px">🔒</span>
+          <div>
+            <div class="clue-item-name" style="color:var(--text-dim)">???</div>
+            <div class="clue-item-hint">용의자 심문에서 발견될 수 있습니다</div>
+          </div>
+        </div>
+        <div class="clue-list-item locked">
+          <span style="font-size:14px">🔒</span>
+          <div>
+            <div class="clue-item-name" style="color:var(--text-dim)">???</div>
+            <div class="clue-item-hint">현장 재조사가 필요합니다</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ RESOLVE ═══ -->
+    <div id="resolve-screen" class="screen">
+      <div class="scroll-content">
+        <div class="section-tag" style="padding-top:16px;color:var(--red)">ACCUSATION</div>
+        <div class="section-title" style="font-size:20px">범인 지목</div>
+        <p style="font-size:11px;color:var(--text-dim);margin:6px 0 16px;line-height:1.6">
+          수집한 증거를 바탕으로 진범을 지목하세요. 한번 지목하면 번복할 수 없습니다.
+        </p>
+
+        <div class="warning-box">
+          <div class="warning-text">⚠️ 현재 수집 단서: 3/6 — 단서가 부족합니다. 더 수사한 후 지목하는 것을 권장합니다.</div>
+        </div>
+
+        <div id="accuse-list">
+          <div class="accuse-card" onclick="selectAccuse(1)" id="accuse-1">
+            <div class="accuse-avatar">👩</div>
+            <div class="accuse-info">
+              <div class="accuse-name">서민아</div>
+              <div class="accuse-rel">피해자의 아내</div>
+            </div>
+            <div class="accuse-check">✓</div>
+          </div>
+          <div class="accuse-card" onclick="selectAccuse(2)" id="accuse-2">
+            <div class="accuse-avatar">👨‍💼</div>
+            <div class="accuse-info">
+              <div class="accuse-name">윤태호</div>
+              <div class="accuse-rel">공동창업자 / CTO</div>
+            </div>
+            <div class="accuse-check">✓</div>
+          </div>
+          <div class="accuse-card" onclick="selectAccuse(3)" id="accuse-3">
+            <div class="accuse-avatar">👩‍💻</div>
+            <div class="accuse-info">
+              <div class="accuse-name">장유진</div>
+              <div class="accuse-rel">전 비서 / 내부고발자</div>
+            </div>
+            <div class="accuse-check">✓</div>
+          </div>
+
+          <button class="btn-accuse disabled" id="btn-accuse" onclick="submitAccuse()">
+            용의자를 선택하세요
+          </button>
+        </div>
+
+        <div class="result-card" id="result-card">
+          <div class="result-icon">🎯</div>
+          <div class="result-title">최종 심문이 시작됩니다</div>
+          <div class="result-desc" id="result-desc"></div>
+          <div class="result-demo">
+            데모에서는 여기까지! 실제 게임에서는<br>AI와의 최종 심문이 시작됩니다.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ BOTTOM NAV ═══ -->
+    <div class="bottom-nav" id="bottom-nav" style="display:none">
+      <button class="nav-btn active" id="nav-case" onclick="goToScreen('case')">
+        <span class="nav-icon">📁</span>사건
+      </button>
+      <button class="nav-btn" id="nav-suspects" onclick="goToScreen('suspects')">
+        <span class="nav-icon">🔍</span>용의자
+      </button>
+      <button class="nav-btn" id="nav-clue" onclick="goToScreen('clue')">
+        <span class="nav-icon">🗺️</span>단서보드
+      </button>
+      <button class="nav-btn" id="nav-resolve" onclick="goToScreen('resolve')">
+        <span class="nav-icon">⚖️</span>지목
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ═══ DATA ═══
+const suspects = {
+  1: { name: '서민아', emoji: '👩', responses: [
+    { q: '사건 당일 밤 어디 계셨어요?', a: '집에 있었어요... 수빈이 재우고 저도 자려는데 남편이 안 들어온 거예요. 요즘 늘 그러니까 그냥 잤어요.' },
+    { q: '남편분 보험 가입 사실 아셨나요?', a: '보험이요...? 아, 회사 사람들이 가입하라고 해서 한 거 같은데... 금액은 잘 몰라요, 정말로.' },
+    { q: '남편의 외도 사실을 알고 계셨나요?', a: '...알고 있었어요. 근데 그게 제가 사람을 죽일 이유가 되나요? 수빈이 엄마인데 제가 그런 짓을...' },
+  ]},
+  2: { name: '윤태호', emoji: '👨‍💼', responses: [
+    { q: '그날 밤 사무실에 계셨다고요?', a: '네, 시리즈B PT 자료 마감이 코앞이라... 아, 출입 기록이요? 담배 피우러 나갔다 들어와서 그럴 수도 있죠.' },
+    { q: '전화 통화에서 왜 목소리를 높이셨어요?', a: '...사업 얘기 하다 보면 그럴 수 있잖아요. 의견 충돌이 있었을 뿐이에요. 30년 지기한테 제가 왜...' },
+    { q: '기술 유출 감사 결과가 어떻게 나올 것 같으셨어요?', a: '그건... 오해에요. 제가 기술을 유출한 게 아니라 정우가 너무 과하게... 아, 더 이상은 변호사 없이 말 못 합니다.' },
+  ]},
+  3: { name: '장유진', emoji: '👩‍💻', responses: [
+    { q: '"반드시 대가를 치르게 하겠다"는 게 무슨 뜻이었어요?', a: '그건 법적으로 대가를 치르게 하겠다는 거였어요! 소송 준비하고 있었거든요. 저를 부당해고한 것에 대해서.' },
+    { q: '그날 밤 정자동에 있었다는 걸 증명할 수 있나요?', a: '네! 배달앱 기록도 있고, 넷플릭스 시청 기록도 있어요. 00시 반에 떡볶이 시켜서 드라마 보고 있었어요.' },
+    { q: '한정우 대표를 마지막으로 본 게 언제예요?', a: '3주 전이요. 판교역에서 우연히 마주쳤는데... 눈도 안 마주치더라고요. 저한테 그렇게까지 한 사람이.' },
+  ]},
+};
+
+const clueData = {
+  1: { title: 'CCTV 영상', desc: '화랑공원 입구 CCTV에 02:30경 두 사람의 실루엣이 포착되었습니다. 한 명은 피해자로 추정되며, 다른 한 명은 키 170~175cm 정도의 인물입니다. 얼굴은 모자와 마스크로 식별 불가.' },
+  2: { title: '심야 통화기록', desc: '피해자는 사망 추정 시각 약 3시간 전인 00:15에 윤태호와 23분간 통화했습니다. 통신사 기록상 양측 모두 목소리가 높아진 구간이 다수 확인됩니다.' },
+  3: { title: '발견된 메모', desc: '피해자 재킷 안주머니에서 접힌 메모지 발견. 손글씨로 "다 끝내자. 더 이상은 못 참겠다." 필적은 피해자 본인의 것으로 확인. 유서인지 다른 의미인지 불분명.' },
+};
+
+// ═══ STATE ═══
+let currentScreen = 'lock';
+let selectedAccuse = null;
+
+// ═══ NAVIGATION ═══
+function goToScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id + '-screen').classList.add('active');
+
+  const nav = document.getElementById('bottom-nav');
+  if (id === 'lock' || id === 'interrogate') {
+    nav.style.display = 'none';
+  } else {
+    nav.style.display = 'flex';
+  }
+
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  const navBtn = document.getElementById('nav-' + id);
+  if (navBtn) navBtn.classList.add('active');
+
+  currentScreen = id;
+}
+
+// ═══ LOCK SCREEN ═══
+setTimeout(() => {
+  document.getElementById('lock-waiting').style.display = 'none';
+  document.getElementById('push-notif').classList.add('show');
+}, 1500);
+
+// ═══ CARDS ═══
+function toggleCard(id) {
+  document.getElementById(id).classList.toggle('expanded');
+}
+
+// ═══ SUSPECTS ═══
+function toggleSuspect(id) {
+  const el = document.getElementById('suspect-' + id);
+  const wasExpanded = el.classList.contains('expanded');
+  document.querySelectorAll('.suspect-card').forEach(c => c.classList.remove('expanded'));
+  if (!wasExpanded) el.classList.add('expanded');
+}
+
+// ═══ INTERROGATION ═══
+let currentSuspectId = null;
+
+function startInterrogation(id) {
+  currentSuspectId = id;
+  const s = suspects[id];
+
+  document.getElementById('interro-avatar').textContent = s.emoji;
+  document.getElementById('interro-name').textContent = s.name;
+
+  const chatArea = document.getElementById('chat-area');
+  chatArea.innerHTML = '';
+
+  addSystemMessage(s.name + ' 심문을 시작합니다.');
+  showQuestions();
+  goToScreen('interrogate');
+}
+
+function addSystemMessage(text) {
+  const chatArea = document.getElementById('chat-area');
+  const div = document.createElement('div');
+  div.className = 'msg msg-system';
+  div.innerHTML = '<div class="msg-bubble">' + text + '</div>';
+  chatArea.appendChild(div);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+function addUserMessage(text) {
+  const chatArea = document.getElementById('chat-area');
+  const div = document.createElement('div');
+  div.className = 'msg msg-user';
+  div.innerHTML = '<div class="msg-bubble">' + text + '</div>';
+  chatArea.appendChild(div);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+function addSuspectMessage(text) {
+  const chatArea = document.getElementById('chat-area');
+  const div = document.createElement('div');
+  div.className = 'msg msg-suspect';
+  div.innerHTML = '<div class="msg-bubble">' + text + '</div>';
+  chatArea.appendChild(div);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+function showTyping() {
+  const chatArea = document.getElementById('chat-area');
+  const div = document.createElement('div');
+  div.className = 'typing-indicator';
+  div.id = 'typing';
+  div.textContent = '답변 중...';
+  chatArea.appendChild(div);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+function hideTyping() {
+  const t = document.getElementById('typing');
+  if (t) t.remove();
+}
+
+function showQuestions() {
+  const area = document.getElementById('question-area');
+  const s = suspects[currentSuspectId];
+  if (!s) return;
+
+  let html = '<div class="question-label">질문을 선택하세요</div>';
+  s.responses.forEach((r, i) => {
+    html += '<button class="question-btn" onclick="askQuestion(' + i + ')">' + r.q + '</button>';
+  });
+  area.innerHTML = html;
+}
+
+function askQuestion(index) {
+  const s = suspects[currentSuspectId];
+  const pair = s.responses[index];
+  if (!pair) return;
+
+  addUserMessage(pair.q);
+
+  const area = document.getElementById('question-area');
+  area.innerHTML = '<div class="question-wait">응답 대기 중...</div>';
+
+  showTyping();
+
+  const delay = 1500 + Math.random() * 1000;
+  setTimeout(() => {
+    hideTyping();
+    addSuspectMessage(pair.a);
+    setTimeout(() => showQuestions(), 500);
+  }, delay);
+}
+
+// ═══ CLUE BOARD ═══
+function showClueDetail(id) {
+  const clue = clueData[id];
+  if (!clue) return;
+
+  const card = document.getElementById('clue-detail');
+  document.getElementById('clue-detail-title').textContent = clue.title;
+  document.getElementById('clue-detail-desc').textContent = clue.desc;
+  card.classList.add('show');
+}
+
+// ═══ RESOLVE ═══
+function selectAccuse(id) {
+  selectedAccuse = id;
+  document.querySelectorAll('.accuse-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('accuse-' + id).classList.add('selected');
+
+  const btn = document.getElementById('btn-accuse');
+  btn.className = 'btn-accuse enabled';
+  btn.textContent = '최종 지목하기';
+}
+
+function submitAccuse() {
+  if (!selectedAccuse) return;
+
+  const names = { 1: '서민아', 2: '윤태호', 3: '장유진' };
+  const name = names[selectedAccuse];
+
+  document.getElementById('accuse-list').style.display = 'none';
+  document.getElementById('result-desc').innerHTML = name + '을(를) 지목했습니다.<br>증거를 제시하며 자백을 받아내세요.';
+  document.getElementById('result-card').classList.add('show');
+}
+</script>
+</body>
+</html>
