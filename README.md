@@ -1,6 +1,9 @@
 # COLD CASE
 AI-Powered Interactive Mystery Game
 
+🎮 Play Demo  
+https://muffinbiter.github.io/coldcase/
+
 ---
 
 ## Overview
